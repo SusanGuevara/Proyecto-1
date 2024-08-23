@@ -1,0 +1,97 @@
+/*Universidad Del Valle de Guatemala
+Facultad de Ingeniería
+Departamento de Electrónica, Mecatrónica y Biomédica
+Electrónica Digital 2
+
+Susan Daniela Guevara Catalán - 22519
+
+Proyecto No. 1 - Sensor de temperatura
+
+Parte 1: Al presionar un botón se adquiere la señal de un sensor de temperatura LM35 mediante un ADC.
+Parte 2: Tres señales PWM controlan 3 leds de color Rojo, Verde y Azul en donde que se encienden dependiendo de la temperatura.
+
+/**********Importación de librerías**********/
+
+#include <Arduino.h>
+#include "driver/ledc.h"
+
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
+/**********Variables globales**********/
+
+// Estructura del boton para enviar la señal del sensor LM35
+struct Button{
+  const uint8_t PIN; // Pin donde está conectado el botón
+  volatile uint32_t numberKeyPresses; // Le dice al código que este atento, la variable cambia en cualquier momento.
+  bool pressed; // Indica si está o no está presionado
+  unsigned long lastPressTime; // Última vez que se presionó el botón (para debounce)
+};
+
+Button Send_temp ={22, 0, false, 0};
+
+// Tiempo de debounce en milisegundos
+#define DEBOUNCE_TIME 200
+
+// Pin del sensor de temperatura
+#define pinTemp 35
+
+// Configuración de la señal PWM
+#define canalPWM 9 
+#define freqPWM 50
+#define resPWM 10
+
+// Pin de los LEDS
+#define ledR 4
+#define ledV 15
+#define ledA 2
+
+/**********Prototipo de funciones**********/
+
+// Interrupción para medir la señal del LM35
+void IRAM_ATTR BTN_SEND_TEMP_ISR(void);
+
+/*********Configuración de entradas y salidas*********/
+
+void setup() {
+  Serial.begin(115200);
+
+  // Configuración del contador del botón de envío de temperatura
+  pinMode(Send_temp.PIN,INPUT_PULLDOWN);
+  attachInterrupt(Send_temp.PIN, BTN_SEND_TEMP_ISR, HIGH);
+}
+
+/*********Bucle infinito*********/
+
+void loop() {
+  // Cuando se presiona el botón Send_temp, se envía la señal del LM35  
+  if(Send_temp.pressed){
+    // Asegura que lee cuando se presiona el botón
+    //Serial.printf("Button add has been pressed %u times\n",Send_temp.numberKeyPresses);
+    int valorAnalogico = analogRead(pinTemp);
+    // Convertir la lectura analógica a temperatura en grados Celsius
+    float voltaje = valorAnalogico * (3.3 / 4095.0); // Conversión a voltaje (3.3V referencia, ADC de 12 bits)
+    float temperaturaC = voltaje * 100.0; // LM35 entrega 10mV por grado Celsius
+    // Imprimir la temperatura
+    Serial.print("Temperatura: ");
+    Serial.print(temperaturaC);
+    Serial.println("ºC");
+    delay(500);
+    Send_temp.pressed = false;
+  }
+}
+
+/*********Definición de funciones*********/
+
+// Interrupción por el botón que envía la temperatura
+void IRAM_ATTR BTN_SEND_TEMP_ISR(){
+  unsigned long currentTime = millis();
+  // Verificar si ha pasado suficiente tiempo desde la última pulsación para evitar rebotes
+  if (currentTime - Send_temp.lastPressTime > DEBOUNCE_TIME) {
+    portENTER_CRITICAL_ISR(&mux);
+    Send_temp.numberKeyPresses++;
+    Send_temp.pressed = true;
+    Send_temp.lastPressTime = currentTime; // Actualizar el tiempo de la última pulsación
+    portEXIT_CRITICAL_ISR(&mux);
+  }
+}
+
