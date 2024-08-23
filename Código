@@ -45,6 +45,12 @@ Button Send_temp ={22, 0, false, 0};
 #define ledV 15
 #define ledA 2
 
+// Variable que almacena la temperatura
+float temperaturaC = 0;
+
+// Definición de canal para los LEDS
+int color = 0; // 0: Rojo, 1: Verde, 2: Azul
+
 /**********Prototipo de funciones**********/
 
 // Interrupción para medir la señal del LM35
@@ -58,6 +64,19 @@ void setup() {
   // Configuración del contador del botón de envío de temperatura
   pinMode(Send_temp.PIN,INPUT_PULLDOWN);
   attachInterrupt(Send_temp.PIN, BTN_SEND_TEMP_ISR, HIGH);
+
+  // Configuración de pines de salida para los LEDs
+  pinMode(ledR, OUTPUT);
+  pinMode(ledV, OUTPUT);
+  pinMode(ledA, OUTPUT);
+
+  // Configuración inicial de PWM en los pines de los LEDs
+  ledcSetup(0, 5000, 8); // Canal 0 para el LED verde
+  ledcAttachPin(ledV, 0);
+  ledcSetup(1, 5000, 8); // Canal 1 para el LED amarillo
+  ledcAttachPin(ledA, 1);
+  ledcSetup(2, 5000, 8); // Canal 2 para el LED rojo
+  ledcAttachPin(ledR, 2);
 }
 
 /*********Bucle infinito*********/
@@ -78,6 +97,24 @@ void loop() {
     delay(500);
     Send_temp.pressed = false;
   }
+
+  // Dependiendo de la temperatura obtenida, se enciende un led y se mueve el servo
+  if (temperaturaC >= 37 && temperaturaC < 37.5) {
+    // Si la temperatura está entre 37 y 37.5 se enciende el led amarillo
+    ledcWrite(1, 255);
+    ledcWrite(2, 0);
+    ledcWrite(0, 0);
+  } else if (temperaturaC >= 37.5) {
+    // Si la temperatura es mayor a 37.5 se enciende el led rojo
+    ledcWrite(0, 0);
+    ledcWrite(1, 0);
+    ledcWrite(2, 255);
+  } else {
+    // Si la temperatura es menor a 37 se enciende el led verde
+    ledcWrite(0, 255);
+    ledcWrite(1, 0);
+    ledcWrite(2, 0);
+  }
 }
 
 /*********Definición de funciones*********/
@@ -94,4 +131,3 @@ void IRAM_ATTR BTN_SEND_TEMP_ISR(){
     portEXIT_CRITICAL_ISR(&mux);
   }
 }
-
