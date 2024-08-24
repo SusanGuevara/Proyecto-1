@@ -9,6 +9,7 @@ Proyecto No. 1 - Sensor de temperatura
 
 Parte 1: Al presionar un botón se adquiere la señal de un sensor de temperatura LM35 mediante un ADC.
 Parte 2: Tres señales PWM controlan 3 leds de color Rojo, Verde y Azul en donde que se encienden dependiendo de la temperatura.
+Parte 3: Dependiendo del valor de la temperatura obtenida se mueve la posición del eje un servo motor.
 
 /**********Importación de librerías**********/
 
@@ -39,11 +40,15 @@ Button Send_temp ={22, 0, false, 0};
 #define canalPWM 9 
 #define freqPWM 50
 #define resPWM 10
+#define pinPWM 23
 
 // Pin de los LEDS
 #define ledR 4
 #define ledV 15
 #define ledA 2
+
+// Variables para el servo
+int servoPosition = 30; 
 
 // Variable que almacena la temperatura
 float temperaturaC = 0;
@@ -77,6 +82,11 @@ void setup() {
   ledcAttachPin(ledA, 1);
   ledcSetup(2, 5000, 8); // Canal 2 para el LED rojo
   ledcAttachPin(ledR, 2);
+
+  // Configuración inicial de PWM para el servomotor
+  ledcSetup(canalPWM, freqPWM, resPWM);
+  ledcAttachPin(pinPWM, canalPWM);
+  ledcWrite(canalPWM, servoPosition);
 }
 
 /*********Bucle infinito*********/
@@ -100,17 +110,26 @@ void loop() {
 
   // Dependiendo de la temperatura obtenida, se enciende un led y se mueve el servo
   if (temperaturaC >= 37 && temperaturaC < 37.5) {
+    for(int i=70; i<100; i++) {
+      ledcWrite(canalPWM, i);
+    }
     // Si la temperatura está entre 37 y 37.5 se enciende el led amarillo
     ledcWrite(1, 255);
     ledcWrite(2, 0);
-    ledcWrite(0, 0);
+    ledcWrite(0, 0);   
   } else if (temperaturaC >= 37.5) {
+    for(int i=101; i<135; i++) {
+      ledcWrite(canalPWM, i);
+    }
     // Si la temperatura es mayor a 37.5 se enciende el led rojo
     ledcWrite(0, 0);
     ledcWrite(1, 0);
     ledcWrite(2, 255);
   } else {
     // Si la temperatura es menor a 37 se enciende el led verde
+    for(int i=30; i<69; i++) {
+      ledcWrite(canalPWM, i);
+    }
     ledcWrite(0, 255);
     ledcWrite(1, 0);
     ledcWrite(2, 0);
