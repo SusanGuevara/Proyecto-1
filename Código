@@ -10,11 +10,14 @@ Proyecto No. 1 - Sensor de temperatura
 Parte 1: Al presionar un botón se adquiere la señal de un sensor de temperatura LM35 mediante un ADC.
 Parte 2: Tres señales PWM controlan 3 leds de color Rojo, Verde y Azul en donde que se encienden dependiendo de la temperatura.
 Parte 3: Dependiendo del valor de la temperatura obtenida se mueve la posición del eje un servo motor.
+Parte 6: Comunicación entre el ESP32 y los servidores de Adafruit IO utilizando WIFI para mandar los valores obtenidos del
+sensor de temperatura y el reloj de temperatura.
 
 /**********Importación de librerías**********/
 
 #include <Arduino.h>
 #include "driver/ledc.h"
+#include "config.h"
 
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -56,6 +59,10 @@ float temperaturaC = 0;
 // Definición de canal para los LEDS
 int color = 0; // 0: Rojo, 1: Verde, 2: Azul
 
+/************************ Set up de los feeds *******************************/
+AdafruitIO_Feed *SensorTemperaturaCanal = io.feed("sensortemperatura");
+AdafruitIO_Feed *RelojTemperaturaCanal = io.feed("relojtemperatura");
+
 /**********Prototipo de funciones**********/
 
 // Interrupción para medir la señal del LM35
@@ -65,6 +72,24 @@ void IRAM_ATTR BTN_SEND_TEMP_ISR(void);
 
 void setup() {
   Serial.begin(115200);
+
+  // Esperar a que el monitor serial abra
+  while(! Serial);
+
+  Serial.print("Connecting to Adafruit IO");
+
+  // Conectando a io.adafruit.com
+  io.connect();
+
+  // Esperando a que se establezca la conexión
+  while(io.status() < AIO_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+
+  // Conexión establecida
+  Serial.println();
+  Serial.println(io.statusText());
 
   // Configuración del contador del botón de envío de temperatura
   pinMode(Send_temp.PIN,INPUT_PULLDOWN);
@@ -92,6 +117,8 @@ void setup() {
 /*********Bucle infinito*********/
 
 void loop() {
+  io.run();
+
   // Cuando se presiona el botón Send_temp, se envía la señal del LM35  
   if(Send_temp.pressed){
     // Asegura que lee cuando se presiona el botón
@@ -105,34 +132,44 @@ void loop() {
     Serial.print(temperaturaC);
     Serial.println("ºC");
     delay(500);
-    Send_temp.pressed = false;
-  }
 
-  // Dependiendo de la temperatura obtenida, se enciende un led y se mueve el servo
-  if (temperaturaC >= 37 && temperaturaC < 37.5) {
-    for(int i=70; i<100; i++) {
-      ledcWrite(canalPWM, i);
+    // Dependiendo de la temperatura obtenida, se enciende un led y se mueve el servo
+    if (temperaturaC >= 37 && temperaturaC < 37.5) {
+      for(int i=80; i<90; i++) {
+        ledcWrite(canalPWM, i);
+      }
+      int i=80;
+      // Si la temperatura está entre 37 y 37.5 se enciende el led amarillo
+      ledcWrite(1, 255);
+      ledcWrite(2, 0);
+      ledcWrite(0, 0);  
+      SensorTemperaturaCanal->save(temperaturaC);
+      RelojTemperaturaCanal->save(i);    
+    } else if (temperaturaC >= 37.5) {
+      for(int i=110; i<120; i++) {
+        ledcWrite(canalPWM, i);
+      }
+      int i=110;
+      // Si la temperatura es mayor a 37.5 se enciende el led rojo
+      ledcWrite(0, 0);
+      ledcWrite(1, 0);
+      ledcWrite(2, 255);
+      SensorTemperaturaCanal->save(temperaturaC);
+      RelojTemperaturaCanal->save(i);   
+    } else {
+      // Si la temperatura es menor a 37 se enciende el led verde
+      for(int i=30; i<40; i++) {
+        ledcWrite(canalPWM, i);
+      }
+      int i=30;
+      ledcWrite(0, 255);
+      ledcWrite(1, 0);
+      ledcWrite(2, 0);
+      SensorTemperaturaCanal->save(temperaturaC);
+      RelojTemperaturaCanal->save(i);   
     }
-    // Si la temperatura está entre 37 y 37.5 se enciende el led amarillo
-    ledcWrite(1, 255);
-    ledcWrite(2, 0);
-    ledcWrite(0, 0);   
-  } else if (temperaturaC >= 37.5) {
-    for(int i=101; i<135; i++) {
-      ledcWrite(canalPWM, i);
-    }
-    // Si la temperatura es mayor a 37.5 se enciende el led rojo
-    ledcWrite(0, 0);
-    ledcWrite(1, 0);
-    ledcWrite(2, 255);
-  } else {
-    // Si la temperatura es menor a 37 se enciende el led verde
-    for(int i=30; i<69; i++) {
-      ledcWrite(canalPWM, i);
-    }
-    ledcWrite(0, 255);
-    ledcWrite(1, 0);
-    ledcWrite(2, 0);
+    delay(3000);
+    Send_temp.pressed = false;
   }
 }
 
