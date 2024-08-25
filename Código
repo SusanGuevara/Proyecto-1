@@ -10,6 +10,7 @@ Proyecto No. 1 - Sensor de temperatura
 Parte 1: Al presionar un botón se adquiere la señal de un sensor de temperatura LM35 mediante un ADC.
 Parte 2: Tres señales PWM controlan 3 leds de color Rojo, Verde y Azul en donde que se encienden dependiendo de la temperatura.
 Parte 3: Dependiendo del valor de la temperatura obtenida se mueve la posición del eje un servo motor.
+Parte 4: Se despliega el valor de la temperatura en tres displays de 7 segmentos multiplexados.
 Parte 6: Comunicación entre el ESP32 y los servidores de Adafruit IO utilizando WIFI para mandar los valores obtenidos del
 sensor de temperatura y el reloj de temperatura.
 
@@ -141,6 +142,7 @@ void setup() {
   pinMode(segE, OUTPUT);
   pinMode(segF, OUTPUT);
   pinMode(segG, OUTPUT);
+  pinMode(dp, OUTPUT);
 
   // Configuración de pines para seleccionar el display
   pinMode(display1, OUTPUT);
@@ -171,31 +173,31 @@ void loop() {
     int unidades = int(temperaturaC) % 10; // Obtener unidades
     int decimales = int((temperaturaC - int(temperaturaC)) * 10); // Obtener primer decimal
 
-    // Encender el display correspondiente y mostrar el número
-    digitalWrite(display1, HIGH);
-    digitalWrite(display2, LOW);
-    digitalWrite(display3, LOW);
-    mostrarNumero(decenas);
-    Serial.print("Decenas: ");
-    Serial.println(decenas);
-    delay(5);
+    // Mostrar los tres displays durante 5 segundos
+    unsigned long startTime = millis();
+    while (millis() - startTime < 5000) {
+      // Multiplexeo para el primer display (decena)
+      digitalWrite(display1, HIGH);
+      digitalWrite(display2, LOW);
+      digitalWrite(display3, LOW);
+      mostrarNumero(decenas);
+      delay(5);  // Tiempo para cada display
 
-    digitalWrite(display1, LOW);
-    digitalWrite(display2, HIGH);
-    digitalWrite(display3, LOW);
-    mostrarNumero(unidades);
-    Serial.print("Unidades: ");
-    Serial.println(unidades);
-    delay(5);
+      // Multiplexeo para el segundo display (unidad)
+      digitalWrite(display1, LOW);
+      digitalWrite(display2, HIGH);
+      digitalWrite(display3, LOW);
+      mostrarNumero(unidades);
+      delay(5);  // Tiempo para cada display
 
-    digitalWrite(display1, LOW);
-    digitalWrite(display2, LOW);
-    digitalWrite(display3, HIGH);
-    mostrarNumero(decimales);
-    digitalWrite(dp, HIGH); // Activar el punto decimal en el tercer display
-    Serial.print("Decimales: ");
-    Serial.println(decimales);
-    delay(5);
+      // Multiplexeo para el tercer display (decimal)
+      digitalWrite(display1, LOW);
+      digitalWrite(display2, LOW);
+      digitalWrite(display3, HIGH);
+      mostrarNumero(decimales);
+      digitalWrite(dp, HIGH); // Activar el punto decimal en el tercer display
+      delay(5);  // Tiempo para cada display
+    }
 
     // Dependiendo de la temperatura obtenida, se enciende un led y se mueve el servo
     if (temperaturaC >= 37 && temperaturaC < 37.5) {
