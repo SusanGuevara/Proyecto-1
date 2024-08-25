@@ -31,7 +31,7 @@ struct Button{
   unsigned long lastPressTime; // Última vez que se presionó el botón (para debounce)
 };
 
-Button Send_temp ={22, 0, false, 0};
+Button Send_temp ={34, 0, false, 0};
 
 // Tiempo de debounce en milisegundos
 #define DEBOUNCE_TIME 200
@@ -43,7 +43,7 @@ Button Send_temp ={22, 0, false, 0};
 #define canalPWM 9 
 #define freqPWM 50
 #define resPWM 10
-#define pinPWM 23
+#define pinPWM 21
 
 // Pin de los LEDS
 #define ledR 4
@@ -54,10 +54,28 @@ Button Send_temp ={22, 0, false, 0};
 int servoPosition = 30; 
 
 // Variable que almacena la temperatura
-float temperaturaC = 0;
+float temperaturaC;
+int decimal;
+int unidad;
+int decena;
 
 // Definición de canal para los LEDS
 int color = 0; // 0: Rojo, 1: Verde, 2: Azul
+
+// Pines compartidos para los segmentos a-g
+#define segA 14
+#define segB 12
+#define segC 5
+#define segD 18
+#define segE 19
+#define segF 25
+#define segG 33
+#define dp 17
+
+// Pines para seleccionar el display activo
+#define display1 26  // Controla el primer display, decena
+#define display2 27 // Controla el segundo display, unidad
+#define display3 13  // Controla el tercer display, decimal
 
 /************************ Set up de los feeds *******************************/
 AdafruitIO_Feed *SensorTemperaturaCanal = io.feed("sensortemperatura");
@@ -67,6 +85,8 @@ AdafruitIO_Feed *RelojTemperaturaCanal = io.feed("relojtemperatura");
 
 // Interrupción para medir la señal del LM35
 void IRAM_ATTR BTN_SEND_TEMP_ISR(void);
+// Muestra el número en el display. Parametros: número entero
+void mostrarNumero(int numero); 
 
 /*********Configuración de entradas y salidas*********/
 
@@ -112,6 +132,20 @@ void setup() {
   ledcSetup(canalPWM, freqPWM, resPWM);
   ledcAttachPin(pinPWM, canalPWM);
   ledcWrite(canalPWM, servoPosition);
+
+  // Configuración de pines para los segmentos
+  pinMode(segA, OUTPUT);
+  pinMode(segB, OUTPUT);
+  pinMode(segC, OUTPUT);
+  pinMode(segD, OUTPUT);
+  pinMode(segE, OUTPUT);
+  pinMode(segF, OUTPUT);
+  pinMode(segG, OUTPUT);
+
+  // Configuración de pines para seleccionar el display
+  pinMode(display1, OUTPUT);
+  pinMode(display2, OUTPUT);
+  pinMode(display3, OUTPUT);
 }
 
 /*********Bucle infinito*********/
@@ -132,6 +166,36 @@ void loop() {
     Serial.print(temperaturaC);
     Serial.println("ºC");
     delay(500);
+
+    int decenas = int(temperaturaC) / 10; // Obtener decenas
+    int unidades = int(temperaturaC) % 10; // Obtener unidades
+    int decimales = int((temperaturaC - int(temperaturaC)) * 10); // Obtener primer decimal
+
+    // Encender el display correspondiente y mostrar el número
+    digitalWrite(display1, HIGH);
+    digitalWrite(display2, LOW);
+    digitalWrite(display3, LOW);
+    mostrarNumero(decenas);
+    Serial.print("Decenas: ");
+    Serial.println(decenas);
+    delay(5);
+
+    digitalWrite(display1, LOW);
+    digitalWrite(display2, HIGH);
+    digitalWrite(display3, LOW);
+    mostrarNumero(unidades);
+    Serial.print("Unidades: ");
+    Serial.println(unidades);
+    delay(5);
+
+    digitalWrite(display1, LOW);
+    digitalWrite(display2, LOW);
+    digitalWrite(display3, HIGH);
+    mostrarNumero(decimales);
+    digitalWrite(dp, HIGH); // Activar el punto decimal en el tercer display
+    Serial.print("Decimales: ");
+    Serial.println(decimales);
+    delay(5);
 
     // Dependiendo de la temperatura obtenida, se enciende un led y se mueve el servo
     if (temperaturaC >= 37 && temperaturaC < 37.5) {
@@ -185,5 +249,101 @@ void IRAM_ATTR BTN_SEND_TEMP_ISR(){
     Send_temp.pressed = true;
     Send_temp.lastPressTime = currentTime; // Actualizar el tiempo de la última pulsación
     portEXIT_CRITICAL_ISR(&mux);
+  }
+}
+
+void mostrarNumero(int numero){
+  // Definición de que segmentos encender según el número
+  switch (numero) {
+    case 0:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, HIGH);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, LOW);
+      break;
+    case 1:
+      digitalWrite(segA, LOW);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, LOW);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, LOW);
+      digitalWrite(segG, LOW);
+      break;
+    case 2:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, LOW);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, HIGH);
+      digitalWrite(segF, LOW);
+      digitalWrite(segG, HIGH);
+      break;
+    case 3:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, LOW);
+      digitalWrite(segG, HIGH);
+      break;
+    case 4:
+      digitalWrite(segA, LOW);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, LOW);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, HIGH);
+      break;
+    case 5:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, LOW);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, HIGH);
+      break;
+    case 6:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, LOW);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, HIGH);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, HIGH);
+      break;
+    case 7:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, LOW);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, LOW);
+      break;
+    case 8:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, HIGH);
+      digitalWrite(segE, HIGH);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, HIGH);
+      break;
+    case 9:
+      digitalWrite(segA, HIGH);
+      digitalWrite(segB, HIGH);
+      digitalWrite(segC, HIGH);
+      digitalWrite(segD, LOW);
+      digitalWrite(segE, LOW);
+      digitalWrite(segF, HIGH);
+      digitalWrite(segG, HIGH);
+      break;
   }
 }
