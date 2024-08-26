@@ -114,7 +114,7 @@ void setup() {
 
   // Configuración del contador del botón de envío de temperatura
   pinMode(Send_temp.PIN,INPUT_PULLDOWN);
-  attachInterrupt(Send_temp.PIN, BTN_SEND_TEMP_ISR, HIGH);
+  attachInterrupt(Send_temp.PIN, BTN_SEND_TEMP_ISR,HIGH);
 
   // Configuración de pines de salida para los LEDs
   pinMode(ledR, OUTPUT);
@@ -173,31 +173,29 @@ void loop() {
     int unidades = int(temperaturaC) % 10; // Obtener unidades
     int decimales = int((temperaturaC - int(temperaturaC)) * 10); // Obtener primer decimal
 
-    // Mostrar los tres displays durante 5 segundos
-    unsigned long startTime = millis();
-    while (millis() - startTime < 5000) {
-      // Multiplexeo para el primer display (decena)
-      digitalWrite(display1, HIGH);
-      digitalWrite(display2, LOW);
-      digitalWrite(display3, LOW);
-      mostrarNumero(decenas);
-      delay(5);  // Tiempo para cada display
+    // Multiplexeo para el primer display (decena)
+    digitalWrite(dp, LOW); // Desactiva el punto decimal en el primer display
+    digitalWrite(display1, HIGH);
+    digitalWrite(display2, LOW);
+    digitalWrite(display3, LOW);
+    mostrarNumero(decenas);
+    delay(3000);  // Tiempo para cada display
 
-      // Multiplexeo para el segundo display (unidad)
-      digitalWrite(display1, LOW);
-      digitalWrite(display2, HIGH);
-      digitalWrite(display3, LOW);
-      mostrarNumero(unidades);
-      delay(5);  // Tiempo para cada display
+    // Multiplexeo para el segundo display (unidad)
+    digitalWrite(dp, HIGH); // Activa el punto decimal en el segundo display
+    digitalWrite(display1, LOW);
+    digitalWrite(display2, HIGH);
+    digitalWrite(display3, LOW);
+    mostrarNumero(unidades);
+    delay(3000);  // Tiempo para cada display
 
-      // Multiplexeo para el tercer display (decimal)
-      digitalWrite(display1, LOW);
-      digitalWrite(display2, LOW);
-      digitalWrite(display3, HIGH);
-      mostrarNumero(decimales);
-      digitalWrite(dp, HIGH); // Activar el punto decimal en el tercer display
-      delay(5);  // Tiempo para cada display
-    }
+    // Multiplexeo para el tercer display (decimal)
+    digitalWrite(dp, LOW); // Desactiva el punto decimal en el tercer display
+    digitalWrite(display1, LOW);
+    digitalWrite(display2, LOW);
+    digitalWrite(display3, HIGH);
+    mostrarNumero(decimales);
+    delay(3000);  // Tiempo para cada display
 
     // Dependiendo de la temperatura obtenida, se enciende un led y se mueve el servo
     if (temperaturaC >= 37 && temperaturaC < 37.5) {
